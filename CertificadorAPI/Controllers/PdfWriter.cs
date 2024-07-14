@@ -28,7 +28,6 @@ namespace CertificadorAPI.Controllers
             string nomeDaColuna = "Buyer's Info";
             try
             {
-                // Verifica se os arquivos foram enviados
                 if (excelDosAlunos == null || pdfFile == null)
                 {
                     return BadRequest("Os arquivos Excel e PDF são obrigatórios.");
@@ -40,14 +39,12 @@ namespace CertificadorAPI.Controllers
                     Directory.CreateDirectory(uploadPath);
                 }
 
-                // Salva o arquivo Excel no diretório temporário
                 string excelFilePath = Path.Combine(uploadPath, excelDosAlunos.FileName);
                 using (var stream = new FileStream(excelFilePath, FileMode.Create))
                 {
                     excelDosAlunos.CopyTo(stream);
                 }
 
-                // Lê os nomes do arquivo Excel
                 var userNames = ExcelReader.ReadUserNameFromExcel(excelFilePath, nomeDaColuna);
 
                 // Diretório temporário para os PDFs individuais
@@ -57,7 +54,6 @@ namespace CertificadorAPI.Controllers
                     Directory.CreateDirectory(tempPdfPath);
                 }
 
-                // Processa cada nome para gerar PDFs individuais
                 foreach (var nomeDoAluno in userNames)
                 {
                     string outputPath = Path.Combine(tempPdfPath, $"{nomeDoAluno}.pdf");
@@ -73,12 +69,13 @@ namespace CertificadorAPI.Controllers
                         PdfPage page = document.Pages[0];
                         XGraphics gfx = XGraphics.FromPdfPage(page);
 
-                        // Usando XUnitPt para especificar o tamanho da fonte explicitamente
                         XFont font = new XFont("Poppins", XUnitPt.FromPoint(24).Point, XFontStyleEx.Regular);
 
                         XSize textSize = gfx.MeasureString(nomeDoAluno, font);
 
-                        double xPos = ( 513  - 92) / 2;
+
+
+                        double xPos = ((842 + 19 - 248) - textSize.Width) / 2;
                         double yPos = 290;
 
                         gfx.DrawString(nomeDoAluno, font, XBrushes.Black, new XPoint(xPos, yPos));
@@ -94,16 +91,13 @@ namespace CertificadorAPI.Controllers
                     System.IO.File.Delete(excelFilePath);
                 }
 
-                // Cria um arquivo ZIP com os PDFs gerados
                 string zipFileName = $"certificados_{DateTime.Now:yyyyMMddHHmmss}.zip";
                 string zipFilePath = Path.Combine(uploadPath, zipFileName);
 
                 ZipFile.CreateFromDirectory(tempPdfPath, zipFilePath);
 
-                // Remove os PDFs individuais do diretório temporário
                 Directory.Delete(tempPdfPath, true);
 
-                // Retorna o arquivo ZIP para download
                 byte[] fileBytes = System.IO.File.ReadAllBytes(zipFilePath);
                 return File(fileBytes, "application/zip", zipFileName);
             }
